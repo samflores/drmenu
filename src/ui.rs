@@ -1,13 +1,15 @@
 use std::{cell::RefCell, rc::Rc};
 
 use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
-use gdk4::{Key, ModifierType};
+use gdk4::{Display, Key, ModifierType};
 use glib::{Propagation, object::Cast};
 use gtk4::{
-    Box, CustomFilter, CustomSorter, Entry, EventControllerKey, FilterListModel, FlowBox, Image,
-    Label, Orientation, PolicyType, PropagationPhase, ScrolledWindow, SelectionMode, SortListModel,
+    Box, CssProvider, CustomFilter, CustomSorter, Entry, EventControllerKey, FilterListModel,
+    FlowBox, Image, Label, Orientation, PolicyType, PropagationPhase,
+    STYLE_PROVIDER_PRIORITY_APPLICATION, ScrolledWindow, SelectionMode, SortListModel,
     gio::ListStore,
     prelude::{BoxExt, EditableExt, EntryExt, EventControllerExt, GtkWindowExt, WidgetExt},
+    style_context_add_provider_for_display,
 };
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
@@ -17,6 +19,7 @@ use crate::menu_entry::MenuEntry;
 use crate::stdin::start_async_stdin_reader;
 
 pub fn build_ui(app: &gtk4::Application) {
+    load_css();
     let window = create_layer_shell_window(app);
     let (entry, flow_box, sort_model, store, custom_filter, custom_sorter) = create_main_widgets();
     let app_state = AppState::new(
@@ -38,6 +41,18 @@ pub fn build_ui(app: &gtk4::Application) {
     window.set_visible(true);
 }
 
+fn load_css() {
+    let provider = CssProvider::new();
+    provider.load_from_string(include_str!("style.css"));
+    if let Some(display) = Display::default() {
+        style_context_add_provider_for_display(
+            &display,
+            &provider,
+            STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
+}
+
 fn create_layer_shell_window(app: &gtk4::Application) -> gtk4::ApplicationWindow {
     let window = gtk4::ApplicationWindow::builder()
         .application(app)
@@ -47,9 +62,9 @@ fn create_layer_shell_window(app: &gtk4::Application) -> gtk4::ApplicationWindow
     window.init_layer_shell();
     window.set_keyboard_mode(gtk4_layer_shell::KeyboardMode::Exclusive);
     window.set_layer(Layer::Overlay);
-    window.set_margin(Edge::Bottom, 3);
-    window.set_margin(Edge::Left, 3);
-    window.set_margin(Edge::Right, 3);
+    window.set_margin(Edge::Bottom, 8);
+    window.set_margin(Edge::Left, 8);
+    window.set_margin(Edge::Right, 8);
     window.set_anchor(Edge::Bottom, true);
     window.set_anchor(Edge::Left, true);
     window.set_anchor(Edge::Right, true);
@@ -126,7 +141,11 @@ fn create_widget_func(item: &glib::Object) -> gtk4::Widget {
 }
 
 fn setup_layout(window: &gtk4::ApplicationWindow, app_state: &AppState) {
-    let h_box = Box::new(Orientation::Horizontal, 10);
+    let h_box = Box::new(Orientation::Horizontal, 6);
+    h_box.set_margin_start(8);
+    h_box.set_margin_end(8);
+    h_box.set_margin_top(4);
+    h_box.set_margin_bottom(4);
     h_box.set_vexpand(true);
     h_box.set_hexpand(true);
     h_box.set_valign(gtk4::Align::Center);

@@ -1,0 +1,96 @@
+/* Theme tokens
+ *   bg      #0E1415   surface #293334   accent  #71ADE7
+ *   fg      #CECECE   fgDim   #708B8D   border  #1A1F20
+ *   font    MonaspiceKr Nerd Font Mono 12
+ *   pill radius 10  padding 8  widget gap 6  outer margin 8
+ */
+
+window.background,
+.background {
+    background-color: #0E1415;
+    color: #CECECE;
+    font-family: "MonaspiceKr Nerd Font Mono", monospace;
+    font-size: 12pt;
+    border: 1px solid #1A1F20;
+    border-radius: 10px;
+}
+
+entry {
+    background-color: #1A1F20;
+    color: #CECECE;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
+    caret-color: #71ADE7;
+    font-family: "MonaspiceKr Nerd Font Mono", monospace;
+    font-size: 12pt;
+    min-height: 12pt;
+}
+
+entry:focus,
+entry:focus-within {
+    box-shadow: none;
+    outline: none;
+    background-color: #1A1F20;
+}
+
+entry selection {
+    background-color: #71ADE7;
+    color: #0E1415;
+}
+
+flowbox,
+flowboxchild {
+    background-color: transparent;
+    color: #CECECE;
+    border: none;
+    padding: 0;
+}
+
+flowboxchild {
+    border-radius: 10px;
+    padding: 4px 8px;
+    margin: 0 2px;
+    min-height: 12pt;
+}
+
+flowboxchild:hover {
+    background-color: #1A1F20;
+}
+
+flowboxchild:selected,
+flowboxchild:selected:focus {
+    background-color: #293334;
+    color: #CECECE;
+    outline: none;
+    box-shadow: none;
+}
+
+flowboxchild label {
+    color: inherit;
+    font-family: "MonaspiceKr Nerd Font Mono", monospace;
+    font-size: 12pt;
+}
+
+flowboxchild:selected label {
+    color: #71ADE7;
+}
+
+scrolledwindow,
+scrolledwindow viewport {
+    background-color: transparent;
+    border: none;
+}
+
+scrollbar,
+scrollbar trough,
+scrollbar slider {
+    background-color: transparent;
+    border: none;
+    min-width: 0;
+    min-height: 0;
+}
+
+image {
+    -gtk-icon-size: 16px;
+}
