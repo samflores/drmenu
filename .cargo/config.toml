@@ -1,0 +1,16 @@
+[alias]
+# Coverage (requires `cargo install cargo-llvm-cov`):
+#   cargo cov          -> unit tests only, writes lcov to target/lcov.info
+#   cargo cov-html     -> unit tests only, HTML report in target/llvm-cov/html
+#   cargo cov-all      -> unit + GTK integration tests, lcov (needs a display / xvfb)
+#   cargo cov-missing  -> unit + integration summary with uncovered line numbers listed
+cov = "llvm-cov --workspace --lcov --output-path target/lcov.info"
+cov-html = "llvm-cov --workspace --html"
+cov-all = "llvm-cov --workspace --features gtk-tests --lcov --output-path target/lcov.info"
+cov-missing = "llvm-cov --workspace --features gtk-tests --show-missing-lines --skip-functions"
+
+# Mutation testing (requires `cargo install cargo-mutants`):
+#   cargo mut          -> mutate pure logic only (see .cargo/mutants.toml excludes)
+# The --features flag runs the full test suite (unit + GTK integration)
+# against each mutant so tests from tests/ can catch mutations too.
+mut = "mutants --no-shuffle --features gtk-tests"

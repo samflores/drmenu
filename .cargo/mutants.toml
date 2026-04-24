@@ -1,0 +1,17 @@
+# cargo-mutants configuration.
+#
+# Exclude modules whose behavior cannot be observed without a real GTK
+# application backend or system I/O: `main.rs` boots the GTK Application,
+# `ui.rs` builds layer-shell windows, and `stdin.rs` reads from real stdin.
+# These need end-to-end tests (driving the binary) that the current suite
+# doesn't have.
+#
+# `app_state.rs` and `test_support.rs` are NOT excluded: the integration
+# tests in tests/gtk_integration.rs drive them under the `gtk-tests` feature,
+# so mutations there should be caught.
+exclude_globs = [
+    "src/main.rs",
+    "src/ui.rs",
+    "src/stdin.rs",
+    "src/test_support.rs",
+]

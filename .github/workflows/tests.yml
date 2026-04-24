@@ -1,0 +1,106 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install GTK dev libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libgtk-layer-shell-dev
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --all-features
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install GTK dev libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libgtk-layer-shell-dev
+      - uses: Swatinem/rust-cache@v2
+      - name: Run unit tests
+        run: cargo test --lib --bins
+
+  gtk-integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install GTK dev libraries and Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libgtk-layer-shell-dev xvfb dbus-x11
+      - uses: Swatinem/rust-cache@v2
+      - name: Run integration tests under Xvfb
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            cargo test --features gtk-tests --test gtk_integration
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Install GTK dev libraries and Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libgtk-layer-shell-dev xvfb dbus-x11
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate coverage (unit + integration under Xvfb)
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            cargo llvm-cov --workspace --features gtk-tests \
+              --lcov --output-path lcov.info
+      - name: Upload LCOV report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: lcov.info
+
+  mutation:
+    runs-on: ubuntu-latest
+    # Mutation runs are expensive; only run on pushes to main so PRs stay fast.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install GTK dev libraries and Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libgtk-layer-shell-dev xvfb dbus-x11
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+      - name: Run mutation testing on pure logic
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            cargo mutants --no-shuffle --features gtk-tests
+      - name: Upload mutants report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutants-out
+          path: mutants.out/
