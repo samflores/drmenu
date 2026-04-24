@@ -19,7 +19,14 @@ use crate::stdin::start_async_stdin_reader;
 pub fn build_ui(app: &gtk4::Application) {
     let window = create_layer_shell_window(app);
     let (entry, flow_box, sort_model, store, custom_filter, custom_sorter) = create_main_widgets();
-    let app_state = AppState::new(entry, flow_box, sort_model, store, custom_filter, custom_sorter);
+    let app_state = AppState::new(
+        entry,
+        flow_box,
+        sort_model,
+        store,
+        custom_filter,
+        custom_sorter,
+    );
 
     setup_layout(&window, &app_state);
     setup_entry_handlers(&app_state);

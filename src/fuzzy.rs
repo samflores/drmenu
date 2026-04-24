@@ -9,7 +9,11 @@ use crate::menu_entry::MenuEntry;
 pub fn create_fuzzy_filter(entry: Rc<Entry>, matcher: Rc<RefCell<Matcher>>) -> CustomFilter {
     CustomFilter::new(move |item| {
         let menu_entry = item.downcast_ref::<MenuEntry>().unwrap();
-        fuzzy_matches(&matcher.borrow(), &menu_entry.label(), entry.text().as_ref())
+        fuzzy_matches(
+            &matcher.borrow(),
+            &menu_entry.label(),
+            entry.text().as_ref(),
+        )
     })
 }
 
