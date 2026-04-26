@@ -62,9 +62,9 @@ fn create_layer_shell_window(app: &gtk4::Application) -> gtk4::ApplicationWindow
     window.init_layer_shell();
     window.set_keyboard_mode(gtk4_layer_shell::KeyboardMode::Exclusive);
     window.set_layer(Layer::Overlay);
-    window.set_margin(Edge::Bottom, 8);
-    window.set_margin(Edge::Left, 8);
-    window.set_margin(Edge::Right, 8);
+    window.set_margin(Edge::Bottom, 2);
+    window.set_margin(Edge::Left, 2);
+    window.set_margin(Edge::Right, 2);
     window.set_anchor(Edge::Bottom, true);
     window.set_anchor(Edge::Left, true);
     window.set_anchor(Edge::Right, true);
@@ -97,6 +97,8 @@ fn create_main_widgets() -> (
         .valign(gtk4::Align::Start)
         .orientation(Orientation::Horizontal)
         .selection_mode(SelectionMode::Single)
+        .column_spacing(0)
+        .row_spacing(0)
         .build();
 
     flow_box.set_min_children_per_line(10000);
@@ -119,22 +121,18 @@ fn create_main_widgets() -> (
 }
 
 fn create_widget_func(item: &glib::Object) -> gtk4::Widget {
-    const MARGIN: i32 = 10;
-    const SPACING: i32 = 2;
+    const ICON_GAP: i32 = 4;
 
     let menu_entry = item.downcast_ref::<MenuEntry>().unwrap();
-    let hbox = Box::new(Orientation::Horizontal, SPACING);
+    let hbox = Box::new(Orientation::Horizontal, 0);
 
     let label = Label::new(Some(&menu_entry.label()));
-    label.set_margin_end(MARGIN);
     hbox.append(&label);
 
     if let Some(path) = menu_entry.icon() {
         let image = Image::from_file(path);
-        image.set_margin_start(MARGIN);
+        image.set_margin_end(ICON_GAP);
         hbox.prepend(&image);
-    } else {
-        label.set_margin_start(MARGIN);
     }
 
     hbox.upcast()
@@ -142,10 +140,7 @@ fn create_widget_func(item: &glib::Object) -> gtk4::Widget {
 
 fn setup_layout(window: &gtk4::ApplicationWindow, app_state: &AppState) {
     let h_box = Box::new(Orientation::Horizontal, 6);
-    h_box.set_margin_start(8);
     h_box.set_margin_end(8);
-    h_box.set_margin_top(4);
-    h_box.set_margin_bottom(4);
     h_box.set_vexpand(true);
     h_box.set_hexpand(true);
     h_box.set_valign(gtk4::Align::Center);
