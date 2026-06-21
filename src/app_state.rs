@@ -7,6 +7,7 @@ use gtk4::{
     prelude::{FilterExt, FlowBoxChildExt, ListModelExt, SorterExt},
 };
 
+use crate::fuzzy::Models;
 use crate::menu_entry::MenuEntry;
 
 struct DebounceState {
@@ -37,21 +38,14 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(
-        entry: Entry,
-        flow_box: FlowBox,
-        sort_model: SortListModel,
-        store: ListStore,
-        custom_filter: CustomFilter,
-        custom_sorter: CustomSorter,
-    ) -> Self {
+    pub fn new(entry: Entry, flow_box: FlowBox, models: Models) -> Self {
         Self {
             entry: Rc::new(entry),
             flow_box: Rc::new(flow_box),
-            sort_model: Rc::new(sort_model),
-            store: Rc::new(store),
-            custom_filter,
-            custom_sorter,
+            sort_model: Rc::new(models.sort_model),
+            store: Rc::new(models.store),
+            custom_filter: models.custom_filter,
+            custom_sorter: models.custom_sorter,
             selected_index: Rc::new(RefCell::new(0)),
             pending_search: Rc::new(RefCell::new(None)),
             debounce_state: Rc::new(RefCell::new(DebounceState::new())),
@@ -87,6 +81,15 @@ impl AppState {
 
     pub fn get_selected_value(&self) -> Option<String> {
         self.selected_menu_entry()?.value()
+    }
+
+    /// Print the selected entry to stdout (value preferred, label as fallback)
+    /// and exit. No-op if nothing is selected.
+    pub fn emit_selection_and_exit(&self) {
+        if let Some(text) = self.get_selected_value().or(self.get_selected_text()) {
+            println!("{}", text);
+            std::process::exit(0);
+        }
     }
 
     pub fn add_entry(&self, entry: MenuEntry) {
@@ -150,10 +153,7 @@ impl AppState {
         self.custom_filter.changed(gtk4::FilterChange::Different);
         self.custom_sorter.changed(gtk4::SorterChange::Different);
 
-        if let Some(child) = self.flow_box.child_at_index(0) {
-            self.flow_box.select_child(&child);
-            *self.selected_index.borrow_mut() = 0;
-        }
+        self.select_item_at_index(0);
     }
 
     #[cfg(feature = "gtk-tests")]

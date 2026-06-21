@@ -1,9 +1,7 @@
 #![cfg(feature = "gtk-tests")]
 
 use std::{
-    cell::RefCell,
     panic::{self, AssertUnwindSafe},
-    rc::Rc,
     sync::{
         Mutex, OnceLock,
         mpsc::{self, Sender},
@@ -12,15 +10,11 @@ use std::{
     time::Duration,
 };
 
-use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use glib::object::Cast;
-use gtk4::{
-    CustomFilter, CustomSorter, Entry, FilterListModel, FlowBox, SelectionMode, SortListModel,
-    gio::ListStore,
-};
+use gtk4::{Entry, FlowBox, SelectionMode};
 
 use crate::app_state::AppState;
-use crate::fuzzy::{create_fuzzy_filter, create_fuzzy_sorter};
+use crate::fuzzy::build_models;
 use crate::menu_entry::MenuEntry;
 
 type GtkJob = Box<dyn FnOnce() + Send>;
@@ -87,31 +81,19 @@ pub fn pump_for(millis: u64) {
 
 pub fn build_test_state() -> AppState {
     let entry = Entry::new();
-    let store = ListStore::new::<MenuEntry>();
-    let entry_rc = Rc::new(entry.clone());
-    let matcher = Rc::new(RefCell::new(Matcher::default()));
+    let models = build_models(&entry);
 
-    let custom_filter: CustomFilter = create_fuzzy_filter(entry_rc.clone(), matcher.clone());
-    let custom_sorter: CustomSorter = create_fuzzy_sorter(entry_rc.clone(), matcher.clone());
-
-    let filter_model = FilterListModel::new(Some(store.clone()), Some(custom_filter.clone()));
-    let sort_model = SortListModel::new(Some(filter_model), Some(custom_sorter.clone()));
-
+    // Tests render a bare Label — they don't need icons — so this bind_model
+    // closure intentionally diverges from prod's `create_widget_func`. Only the
+    // model wiring (via `build_models`) is shared.
     let flow_box = FlowBox::builder()
         .selection_mode(SelectionMode::Single)
         .build();
-    flow_box.bind_model(Some(&sort_model), |item| {
+    flow_box.bind_model(Some(&models.sort_model), |item| {
         use gtk4::Label;
         let menu_entry = item.downcast_ref::<MenuEntry>().unwrap();
         Label::new(Some(&menu_entry.label())).upcast()
     });
 
-    AppState::new(
-        entry_rc.as_ref().clone(),
-        flow_box,
-        sort_model,
-        store,
-        custom_filter,
-        custom_sorter,
-    )
+    AppState::new(entry, flow_box, models)
 }
