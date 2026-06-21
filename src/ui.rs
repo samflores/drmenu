@@ -1,35 +1,22 @@
-use std::{cell::RefCell, rc::Rc};
-
-use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use gdk4::{Display, Key, ModifierType};
 use glib::{Propagation, object::Cast};
 use gtk4::{
-    Box, CssProvider, CustomFilter, CustomSorter, Entry, EventControllerKey, FilterListModel,
-    FlowBox, Image, Label, Orientation, PolicyType, PropagationPhase,
-    STYLE_PROVIDER_PRIORITY_APPLICATION, ScrolledWindow, SelectionMode, SortListModel,
-    gio::ListStore,
+    Box, CssProvider, Entry, EventControllerKey, FlowBox, Image, Label, Orientation, PolicyType,
+    PropagationPhase, STYLE_PROVIDER_PRIORITY_APPLICATION, ScrolledWindow, SelectionMode,
     prelude::{BoxExt, EditableExt, EntryExt, EventControllerExt, GtkWindowExt, WidgetExt},
     style_context_add_provider_for_display,
 };
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
 use crate::app_state::AppState;
-use crate::fuzzy::{create_fuzzy_filter, create_fuzzy_sorter};
+use crate::fuzzy::build_models;
 use crate::menu_entry::MenuEntry;
 use crate::stdin::start_async_stdin_reader;
 
 pub fn build_ui(app: &gtk4::Application) {
     load_css();
     let window = create_layer_shell_window(app);
-    let (entry, flow_box, sort_model, store, custom_filter, custom_sorter) = create_main_widgets();
-    let app_state = AppState::new(
-        entry,
-        flow_box,
-        sort_model,
-        store,
-        custom_filter,
-        custom_sorter,
-    );
+    let app_state = create_app_state();
 
     setup_layout(&window, &app_state);
     setup_entry_handlers(&app_state);
@@ -73,25 +60,9 @@ fn create_layer_shell_window(app: &gtk4::Application) -> gtk4::ApplicationWindow
     window
 }
 
-fn create_main_widgets() -> (
-    Entry,
-    FlowBox,
-    SortListModel,
-    ListStore,
-    CustomFilter,
-    CustomSorter,
-) {
+fn create_app_state() -> AppState {
     let entry = Entry::new();
-    let store = ListStore::new::<MenuEntry>();
-
-    let entry_rc = Rc::new(entry.clone());
-    let matcher = Rc::new(RefCell::new(Matcher::default()));
-
-    let custom_filter = create_fuzzy_filter(entry_rc.clone(), matcher.clone());
-    let custom_sorter = create_fuzzy_sorter(entry_rc.clone(), matcher.clone());
-
-    let filter_model = FilterListModel::new(Some(store.clone()), Some(custom_filter.clone()));
-    let sort_model = SortListModel::new(Some(filter_model.clone()), Some(custom_sorter.clone()));
+    let models = build_models(&entry);
 
     let flow_box = FlowBox::builder()
         .valign(gtk4::Align::Start)
@@ -108,16 +79,9 @@ fn create_main_widgets() -> (
     flow_box.set_hexpand(false);
     flow_box.set_valign(gtk4::Align::Center);
 
-    flow_box.bind_model(Some(&sort_model), create_widget_func);
+    flow_box.bind_model(Some(&models.sort_model), create_widget_func);
 
-    (
-        entry_rc.as_ref().clone(),
-        flow_box,
-        sort_model,
-        store,
-        custom_filter,
-        custom_sorter,
-    )
+    AppState::new(entry, flow_box, models)
 }
 
 fn create_widget_func(item: &glib::Object) -> gtk4::Widget {
@@ -165,13 +129,7 @@ fn setup_layout(window: &gtk4::ApplicationWindow, app_state: &AppState) {
 fn setup_entry_handlers(app_state: &AppState) {
     let state_for_activate = app_state.clone();
     app_state.entry.connect_activate(move |_| {
-        if let Some(text) = state_for_activate
-            .get_selected_value()
-            .or(state_for_activate.get_selected_text())
-        {
-            println!("{}", text);
-            std::process::exit(0);
-        }
+        state_for_activate.emit_selection_and_exit();
     });
 
     let state_for_change = app_state.clone();
@@ -217,13 +175,7 @@ fn setup_key_controller(app_state: &AppState) {
                 Propagation::Stop
             }
             Key::y | Key::Y if ctrl => {
-                if let Some(text) = state_for_key
-                    .get_selected_value()
-                    .or(state_for_key.get_selected_text())
-                {
-                    println!("{}", text);
-                    std::process::exit(0);
-                }
+                state_for_key.emit_selection_and_exit();
                 Propagation::Stop
             }
             _ => Propagation::Proceed,

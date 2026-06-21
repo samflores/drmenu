@@ -2,9 +2,41 @@ use std::{cell::RefCell, cmp, rc::Rc};
 
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2 as Matcher};
 use glib::object::Cast;
-use gtk4::{CustomFilter, CustomSorter, Entry, prelude::EditableExt};
+use gtk4::{
+    CustomFilter, CustomSorter, Entry, FilterListModel, SortListModel, gio::ListStore,
+    prelude::EditableExt,
+};
 
 use crate::menu_entry::MenuEntry;
+
+/// The filtering/sorting model chain wired around an `Entry`'s text. Prod and
+/// tests share this assembly so the two construction paths can't drift; each
+/// supplies its own `FlowBox` and `bind_model` closure on top.
+pub struct Models {
+    pub store: ListStore,
+    pub sort_model: SortListModel,
+    pub custom_filter: CustomFilter,
+    pub custom_sorter: CustomSorter,
+}
+
+pub fn build_models(entry: &Entry) -> Models {
+    let store = ListStore::new::<MenuEntry>();
+    let entry_rc = Rc::new(entry.clone());
+    let matcher = Rc::new(RefCell::new(Matcher::default()));
+
+    let custom_filter = create_fuzzy_filter(entry_rc.clone(), matcher.clone());
+    let custom_sorter = create_fuzzy_sorter(entry_rc, matcher);
+
+    let filter_model = FilterListModel::new(Some(store.clone()), Some(custom_filter.clone()));
+    let sort_model = SortListModel::new(Some(filter_model), Some(custom_sorter.clone()));
+
+    Models {
+        store,
+        sort_model,
+        custom_filter,
+        custom_sorter,
+    }
+}
 
 pub fn create_fuzzy_filter(entry: Rc<Entry>, matcher: Rc<RefCell<Matcher>>) -> CustomFilter {
     CustomFilter::new(move |item| {
