@@ -17,3 +17,6 @@ tracing = "0.1.41"
 
 [features]
 gtk-tests = []
+
+[profile.release]
+strip = "symbols"
